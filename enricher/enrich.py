@@ -12,6 +12,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 from .posthog_client import PersonContext, PostHogClient
 
@@ -62,8 +63,8 @@ def build_payload(ctx: PersonContext) -> dict[str, Any]:
             "mrr": props.get("mrr"),
             "sdk": props.get("sdk"),
             "country": props.get("$geoip_country_name"),
-            "last_seen": props.get("last_seen"),
-            "last_seen_human": _ago(props.get("last_seen")),
+            "last_seen": _last_seen(ctx),
+            "last_seen_human": _ago(_last_seen(ctx)),
         },
         "cohorts": ctx.cohorts,
         "events": [
@@ -86,11 +87,40 @@ def build_payload(ctx: PersonContext) -> dict[str, Any]:
 
 
 def _event_detail(e: dict[str, Any]) -> str:
+    """A short, human-meaningful detail for one event.
+
+    Different event kinds carry their signal in different places — exceptions in
+    the message, pageviews in the URL path, custom events in business props. We
+    deliberately do NOT fall back to $current_url for custom events, or every
+    autocaptured event shows a noisy full URL.
+    """
+    name = e.get("event") or ""
     p = e.get("properties", {})
-    for key in ("$exception_message", "$current_url", "subject", "to", "flag", "amount", "type"):
-        if key in p and p[key] not in (None, ""):
-            return f"{p[key]}"
+
+    if name == "$exception" or p.get("$exception_message"):
+        msg = p.get("$exception_message")
+        if not msg:
+            lst = p.get("$exception_list") or []
+            if isinstance(lst, list) and lst:
+                first = lst[0] or {}
+                msg = first.get("value") or first.get("type")
+        return str(msg) if msg else ""
+
+    if name == "$pageview" and p.get("$current_url"):
+        return urlparse(p["$current_url"]).path or p["$current_url"]
+
+    for key in ("subject", "to", "amount", "flag", "type", "plan"):
+        if p.get(key) not in (None, ""):
+            return str(p[key])
     return ""
+
+
+def _last_seen(ctx: PersonContext) -> str | None:
+    """PostHog has no `last_seen` person property by default — fall back to the
+    timestamp of the newest event (events are stored oldest-first)."""
+    return ctx.properties.get("last_seen") or (
+        ctx.events[-1].get("timestamp") if ctx.events else None
+    )
 
 
 def build_summary(ctx: PersonContext) -> str:
@@ -106,7 +136,7 @@ def build_summary(ctx: PersonContext) -> str:
         f"🦔 **PostHog context for {p.get('name') or ctx.email}**  _(source: {ctx.source})_",
         "",
         f"**Plan:** {p.get('plan', '—')}  •  **MRR:** ${p.get('mrr', 0)}  •  "
-        f"**Org:** {p.get('organization', '—')}  •  **Last seen:** {_ago(p.get('last_seen'))}",
+        f"**Org:** {p.get('organization', '—')}  •  **Last seen:** {_ago(_last_seen(ctx))}",
     ]
     if p.get("sdk"):
         lines.append(f"**SDK:** {p['sdk']}")
@@ -172,7 +202,7 @@ def build_summary_html(ctx: PersonContext) -> str:
         f"<p><strong>Plan:</strong> {_h(p.get('plan', '—'))} &nbsp;•&nbsp; "
         f"<strong>MRR:</strong> ${_h(p.get('mrr', 0))} &nbsp;•&nbsp; "
         f"<strong>Org:</strong> {_h(p.get('organization', '—'))} &nbsp;•&nbsp; "
-        f"<strong>Last seen:</strong> {_h(_ago(p.get('last_seen')))}</p>",
+        f"<strong>Last seen:</strong> {_h(_ago(_last_seen(ctx)))}</p>",
     ]
     meta = []
     if p.get("sdk"):

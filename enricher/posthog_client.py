@@ -103,27 +103,40 @@ class PostHogClient:
         if not person:
             return PersonContext(found=False, email=email, source="live")
 
-        distinct_id = (person.get("distinct_ids") or [None])[0]
+        # A person commonly has several distinct_ids (an anonymous one from before
+        # they were identified, plus their email). Events are spread across all of
+        # them, so we must query each — using only [0] silently drops events.
+        distinct_ids = person.get("distinct_ids") or []
+        # Prefer the non-UUID (identified) id for flag evaluation; fall back to first.
+        distinct_id = next(
+            (d for d in distinct_ids if "@" in d), distinct_ids[0] if distinct_ids else None
+        )
         props = person.get("properties", {})
 
-        # 2. Recent events for this distinct_id.
-        events = []
-        if distinct_id:
-            ev = self._api(
-                "events/",
-                params={"distinct_id": distinct_id, "limit": event_limit},
-            ).get("results", [])
-            events = [
-                {
-                    "event": e.get("event"),
-                    "timestamp": e.get("timestamp"),
-                    "properties": {
-                        k: v for k, v in (e.get("properties") or {}).items()
-                        if not k.startswith("$set")
-                    },
-                }
-                for e in ev
-            ]
+        # 2. Recent events across every distinct_id, merged.
+        raw: list[dict[str, Any]] = []
+        for did in distinct_ids:
+            try:
+                raw.extend(
+                    self._api("events/", params={"distinct_id": did, "limit": event_limit})
+                    .get("results", [])
+                )
+            except requests.HTTPError:
+                continue
+        # PostHog returns newest-first; our downstream convention is oldest-first
+        # (build_payload/build_summary reverse for display). Normalise to ascending.
+        raw.sort(key=lambda e: e.get("timestamp") or "")
+        events = [
+            {
+                "event": e.get("event"),
+                "timestamp": e.get("timestamp"),
+                "properties": {
+                    k: v for k, v in (e.get("properties") or {}).items()
+                    if not k.startswith("$set")
+                },
+            }
+            for e in raw[-event_limit:]
+        ]
 
         # 3. Session recordings for this person.
         recordings = []
@@ -160,13 +173,23 @@ class PostHogClient:
             source="live",
         )
 
+    @property
+    def ingestion_host(self) -> str:
+        """/decide and event capture live on the ingestion host (us.i.posthog.com),
+        not the API host (us.posthog.com). Derive it from the configured host."""
+        if "://us.posthog.com" in self.host:
+            return "https://us.i.posthog.com"
+        if "://eu.posthog.com" in self.host:
+            return "https://eu.i.posthog.com"
+        return self.host  # self-hosted: same host serves both
+
     def _live_flags(self, distinct_id: str) -> dict[str, bool]:
         project_api_key = os.getenv("POSTHOG_PROJECT_API_KEY")
         if not project_api_key:
             return {}
         try:
             resp = requests.post(
-                f"{self.host}/decide/?v=3",
+                f"{self.ingestion_host}/decide/?v=3",
                 json={"api_key": project_api_key, "distinct_id": distinct_id},
                 timeout=15,
             )

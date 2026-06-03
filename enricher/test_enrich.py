@@ -8,11 +8,15 @@ from .posthog_client import PostHogClient
 
 
 def _ctx(email):
-    return PostHogClient(api_key=None, project_id=None).get_person_context(email)
+    client = PostHogClient(api_key=None, project_id=None)
+    # Force mock regardless of any POSTHOG_* in the environment / .env, so these
+    # stay deterministic and offline even on a machine wired up for live.
+    client.live = False
+    return client.get_person_context(email)
 
 
 def test_known_person_summary():
-    ctx = _ctx("victoria@thetest.ai")
+    ctx = _ctx("victoria+test@thetest.ai")
     summary = build_summary(ctx)
     assert ctx.found
     assert ctx.source == "mock"
@@ -28,7 +32,7 @@ def test_unknown_person():
 
 
 def test_payload_shape():
-    payload = build_payload(_ctx("victoria@thetest.ai"))
+    payload = build_payload(_ctx("victoria+test@thetest.ai"))
     assert payload["found"] is True
     assert payload["person"]["mrr"] == 1450
     assert any(e["is_signal"] for e in payload["events"])   # at least one signal flagged
