@@ -142,6 +142,85 @@ def build_summary(ctx: PersonContext) -> str:
     return "\n".join(lines)
 
 
+def _h(text: object) -> str:
+    """Escape user/data values before putting them in HTML."""
+    return (
+        str(text if text is not None else "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
+def build_summary_html(ctx: PersonContext) -> str:
+    """HTML for a Zendesk internal note (posted via `html_body`).
+
+    Same content as build_summary, but Zendesk renders the body as HTML, so
+    markdown asterisks/dashes would show literally. This emits real tags.
+    """
+    if not ctx.found:
+        return (
+            f"<p>🦔 <strong>PostHog</strong>: no person found for "
+            f"<code>{_h(ctx.email)}</code> (source: {_h(ctx.source)}). "
+            f"They may use a different email in-product.</p>"
+        )
+
+    p = ctx.properties
+    parts = [
+        f"<p>🦔 <strong>PostHog context for {_h(p.get('name') or ctx.email)}</strong> "
+        f"<em>(source: {_h(ctx.source)})</em></p>",
+        f"<p><strong>Plan:</strong> {_h(p.get('plan', '—'))} &nbsp;•&nbsp; "
+        f"<strong>MRR:</strong> ${_h(p.get('mrr', 0))} &nbsp;•&nbsp; "
+        f"<strong>Org:</strong> {_h(p.get('organization', '—'))} &nbsp;•&nbsp; "
+        f"<strong>Last seen:</strong> {_h(_ago(p.get('last_seen')))}</p>",
+    ]
+    meta = []
+    if p.get("sdk"):
+        meta.append(f"<strong>SDK:</strong> {_h(p['sdk'])}")
+    if ctx.cohorts:
+        meta.append(f"<strong>Cohorts:</strong> {_h(', '.join(ctx.cohorts))}")
+    if meta:
+        parts.append("<p>" + "<br>".join(meta) + "</p>")
+
+    signals = _signals(ctx)
+    if signals:
+        items = "".join(
+            f"<li><code>{_h(s.get('event'))}</code> — {_h(_event_detail(s))} "
+            f"({_h(_ago(s.get('timestamp')))})</li>"
+            for s in signals
+        )
+        parts.append(f"<p><strong>⚠️ Friction in the last session:</strong></p><ul>{items}</ul>")
+
+    if ctx.events:
+        items = ""
+        for e in reversed(ctx.events[-8:]):
+            detail = _event_detail(e)
+            suffix = f" — {_h(detail)}" if detail else ""
+            items += (
+                f"<li>{_h(e.get('event'))}{suffix} "
+                f"<em>{_h(_ago(e.get('timestamp')))}</em></li>"
+            )
+        parts.append(f"<p><strong>Recent activity (newest first):</strong></p><ul>{items}</ul>")
+
+    if ctx.recordings:
+        items = ""
+        for r in ctx.recordings:
+            mins = round((r.get("duration_seconds") or 0) / 60, 1)
+            errs = r.get("console_errors", 0)
+            err_note = f", {errs} console errors" if errs else ""
+            items += (
+                f'<li><a href="{_h(r.get("url"))}">{mins}m recording</a> '
+                f"({_h(_ago(r.get('start')))}{_h(err_note)})</li>"
+            )
+        parts.append(f"<p><strong>📹 Session recordings:</strong></p><ul>{items}</ul>")
+
+    active_flags = [k for k, v in ctx.flags.items() if v]
+    if active_flags:
+        parts.append(f"<p><strong>🚩 Active flags:</strong> {_h(', '.join(active_flags))}</p>")
+
+    return "\n".join(parts)
+
+
 def _cli() -> None:
     email = sys.argv[1] if len(sys.argv) > 1 else "victoria@thetest.ai"
     client = PostHogClient()

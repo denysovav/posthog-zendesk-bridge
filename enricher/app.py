@@ -19,7 +19,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .enrich import build_payload, build_summary
+from .enrich import build_payload, build_summary, build_summary_html
 from .posthog_client import PostHogClient
 
 app = FastAPI(title="PostHog ↔ Zendesk Bridge", version="0.1.0")
@@ -57,19 +57,19 @@ class ZendeskWebhook(BaseModel):
 @app.post("/webhooks/zendesk")
 def zendesk_webhook(payload: ZendeskWebhook) -> dict:
     ctx = client.get_person_context(payload.requester_email)
-    note = build_summary(ctx)
-    posted = _post_internal_note(payload.ticket_id, note)
+    html = build_summary_html(ctx)
+    posted = _post_internal_note(payload.ticket_id, html)
     return {
         "ticket_id": payload.ticket_id,
         "person_found": ctx.found,
         "posthog_mode": ctx.source,
         "note_posted": posted,
-        "note_preview": note,
+        "note_preview": build_summary(ctx),  # markdown, for human-readable API responses
     }
 
 
-def _post_internal_note(ticket_id: int, markdown: str) -> bool:
-    """PUT the note as a private comment on the ticket. No-op if Zendesk creds absent."""
+def _post_internal_note(ticket_id: int, html: str) -> bool:
+    """PUT the note as a private HTML comment on the ticket. No-op if Zendesk creds absent."""
     subdomain = os.getenv("ZENDESK_SUBDOMAIN")
     email = os.getenv("ZENDESK_EMAIL")
     token = os.getenv("ZENDESK_API_TOKEN")
@@ -78,7 +78,8 @@ def _post_internal_note(ticket_id: int, markdown: str) -> bool:
     url = f"https://{subdomain}.zendesk.com/api/v2/tickets/{ticket_id}.json"
     resp = requests.put(
         url,
-        json={"ticket": {"comment": {"body": markdown, "public": False}}},
+        # html_body so Zendesk renders formatting; markdown in `body` shows literally.
+        json={"ticket": {"comment": {"html_body": html, "public": False}}},
         auth=(f"{email}/token", token),
         timeout=15,
     )
