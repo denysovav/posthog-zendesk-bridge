@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Acme Corp — Billing</title>
+  <title>PostHog data seeder</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -14,9 +14,10 @@
     .sub { color: #6b7280; margin: 0 0 20px; }
     .who { font-size: 13px; color: #6b7280; }
     .who b { color: #1d1f27; }
-    button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 11px 16px;
-             cursor: pointer; }
-    .primary { background: #1d4aff; color: #fff; width: 100%; font-size: 16px; }
+    label.fld { display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+    select { font: inherit; width: 100%; padding: 10px 12px; border: 1px solid #d8d8de; border-radius: 8px; background: #fff; margin-bottom: 4px; }
+    button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 11px 16px; cursor: pointer; }
+    .primary { background: #1d4aff; color: #fff; width: 100%; font-size: 16px; margin-top: 4px; }
     .primary:hover { background: #1640d6; }
     .primary:disabled { opacity: .5; cursor: default; }
     .step { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f0f0f3; }
@@ -35,119 +36,152 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Acme Corp</h1>
-      <p class="sub">Billing &amp; plans</p>
-      <p class="who">Signed in as <b id="who">…</b> · <span id="mode">connecting…</span></p>
+      <h1 id="title">PostHog data seeder</h1>
+      <p class="sub">Generate a realistic support scenario for a chosen person</p>
+      <label class="fld" for="persona">Who is this session for?</label>
+      <select id="persona"></select>
+      <p class="who" style="margin-top:10px">Signed in as <b id="who">…</b> · <span id="mode">connecting…</span></p>
     </div>
 
     <div class="card">
-      <div class="step"><span class="dot" id="d0"></span><span class="label">Open upgrade page</span><span class="t" id="t0"></span></div>
-      <div class="step"><span class="dot" id="d1"></span><span class="label">Start plan upgrade → Scale</span><span class="t" id="t1"></span></div>
-      <div class="step"><span class="dot" id="d2"></span><span class="label">Add payment method</span><span class="t" id="t2"></span></div>
-      <div class="step"><span class="dot" id="d3"></span><span class="label">Submit checkout</span><span class="t" id="t3"></span></div>
-      <div class="step"><span class="dot" id="d4"></span><span class="label">Payment declined (402 card_declined)</span><span class="t" id="t4"></span></div>
-      <div class="step"><span class="dot" id="d5"></span><span class="label">Retry — declined again</span><span class="t" id="t5"></span></div>
-      <div class="step"><span class="dot" id="d6"></span><span class="label">Open support</span><span class="t" id="t6"></span></div>
-
+      <div id="steps"></div>
       <div id="status" class="status run">Loading PostHog…</div>
-      <button class="primary" id="run" disabled>Run the billing scenario</button>
+      <button class="primary" id="run" disabled>Run the scenario</button>
     </div>
 
     <p class="who" style="text-align:center">
-      This page sends real events to PostHog project <code>452957</code>.<br>
-      After running, generated data appears under the person below within ~30s.
+      Sends real events to PostHog project <code>452957</code>.<br>
+      Create a Zendesk ticket with the same email to see it in the sidebar.
     </p>
   </div>
 
-  <!-- PostHog snippet (official). Loads posthog-js and exposes window.posthog. -->
   <script>
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
 
     posthog.init('phc_pcf6pLx3wWMF874n4BzsZWDQZpNihFz6wxWmxPtsWwvF', {
       api_host: 'https://us.i.posthog.com',
       person_profiles: 'always',
-      capture_pageview: true,
-      disable_session_recording: false,  // we want a replay for the demo
+      capture_pageview: false,   // we drive pageviews explicitly per scenario
+      disable_session_recording: false,
     });
 
-    // ---- the person this session belongs to ----
-    const EMAIL = 'victoria@thetest.ai';   // matches the Zendesk ticket requester
-    const PROPS = {
-      email: EMAIL,
-      name: 'Victoria Sirius',
-      organization: 'Acme Corp',
-      plan: 'Scale',
-      mrr: 1450,
-      sdk: 'posthog-js (demo)',
+    const ORIGIN = location.origin;
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // ---- personas: each is a recognizable customer with their own story ----
+    const PERSONAS = {
+      'victoria+test@thetest.ai': {
+        name: 'Victoria Lopez',
+        title: 'Acme Corp — Billing',
+        props: { organization: 'Acme Corp', plan: 'Scale', mrr: 1450, sdk: 'posthog-js (demo)' },
+        steps: [
+          { label: 'Open upgrade page', fire: ph => ph.capture('$pageview', { $current_url: ORIGIN + '/billing/upgrade' }) },
+          { label: 'Start plan upgrade → Scale', fire: ph => ph.capture('plan upgrade started', { from: 'Free', to: 'Scale' }) },
+          { label: 'Add payment method', fire: ph => ph.capture('payment method added', { brand: 'visa' }) },
+          { label: 'Submit checkout', fire: ph => ph.capture('checkout submitted', { amount: 1450, currency: 'USD' }) },
+          { label: 'Payment declined (402 card_declined)', err: true, fire: ph => {
+              ph.captureException(new Error('402 from billing-svc: card_declined'), { $exception_type: 'PaymentError', stage: 'checkout' });
+              ph.capture('$exception', { $exception_message: '402 from billing-svc: card_declined', $exception_type: 'PaymentError' });
+          } },
+          { label: 'Retry — declined again', err: true, fire: ph => {
+              ph.capture('checkout retry', {});
+              ph.capture('$exception', { $exception_message: '402 from billing-svc: card_declined', $exception_type: 'PaymentError' });
+          } },
+          { label: 'Open support', fire: ph => {
+              ph.capture('$pageview', { $current_url: ORIGIN + '/support/new' });
+              ph.capture('support ticket created', { subject: "Can't upgrade - card keeps getting declined" });
+          } },
+        ],
+      },
+      'sam@hooli.com': {
+        name: 'Sam Patel',
+        title: 'Hooli — Trial',
+        props: { organization: 'Hooli', plan: 'Free', mrr: 0, sdk: 'posthog-js (demo)' },
+        steps: [
+          { label: 'Open dashboard', fire: ph => ph.capture('$pageview', { $current_url: ORIGIN + '/dashboard' }) },
+          { label: 'Create a funnel insight', fire: ph => ph.capture('insight created', { type: 'funnel' }) },
+          { label: 'Start data export (50k rows)', fire: ph => ph.capture('data export started', { rows: 50000 }) },
+          { label: 'Export failed — timeout', err: true, fire: ph => {
+              ph.captureException(new Error('ExportError: timed out after 30s'), { $exception_type: 'ExportError', stage: 'export' });
+              ph.capture('$exception', { $exception_message: 'ExportError: timed out after 30s', $exception_type: 'ExportError' });
+          } },
+          { label: 'Hit Free-plan row limit', err: true, fire: ph =>
+              ph.capture('$exception', { $exception_message: 'Free plan row limit reached (10k)', $exception_type: 'PlanLimit' }) },
+          { label: 'View pricing', fire: ph => ph.capture('$pageview', { $current_url: ORIGIN + '/pricing' }) },
+          { label: 'Open support', fire: ph => {
+              ph.capture('$pageview', { $current_url: ORIGIN + '/support/new' });
+              ph.capture('support ticket created', { subject: 'Data export keeps timing out' });
+          } },
+        ],
+      },
     };
 
-    posthog.identify(EMAIL, PROPS);
-    posthog.setPersonProperties(PROPS);
-
-    document.getElementById('who').textContent = EMAIL;
-
-    // Wait for the SDK to be ready, then enable the button.
-    posthog.onFeatureFlags(() => {
-      document.getElementById('mode').textContent = 'PostHog connected ✓';
-      const btn = document.getElementById('run');
-      btn.disabled = false;
-      document.getElementById('status').className = 'status run';
-      document.getElementById('status').textContent = 'Ready. Click below to generate the session.';
+    // ---- UI wiring ----
+    const sel = document.getElementById('persona');
+    Object.entries(PERSONAS).forEach(([email, p]) => {
+      const o = document.createElement('option');
+      o.value = email; o.textContent = `${p.name} — ${p.props.organization} (${p.props.plan}) · ${email}`;
+      sel.appendChild(o);
     });
-    // Fallback in case flags are slow.
-    setTimeout(() => {
-      const btn = document.getElementById('run');
-      if (btn.disabled) {
-        btn.disabled = false;
-        document.getElementById('mode').textContent = 'PostHog connected ✓';
-        document.getElementById('status').textContent = 'Ready. Click below to generate the session.';
-      }
-    }, 3000);
 
-    // ---- the scenario ----
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    const stamp = (i) => { document.getElementById('t' + i).textContent =
-      new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'}); };
-    const mark = (i, cls) => { document.getElementById('d' + i).className = 'dot ' + cls; stamp(i); };
+    let ready = false;
+    function selectPersona(email) {
+      const p = PERSONAS[email];
+      document.getElementById('title').textContent = p.title;
+      document.getElementById('who').textContent = `${p.name} <${email}>`;
+
+      const props = { email, name: p.name, ...p.props };
+      posthog.identify(email, props);
+      posthog.setPersonProperties(props);
+
+      // render steps
+      const wrap = document.getElementById('steps');
+      wrap.innerHTML = p.steps.map((s, i) =>
+        `<div class="step"><span class="dot" id="d${i}"></span><span class="label">${s.label}</span><span class="t" id="t${i}"></span></div>`
+      ).join('');
+
+      const status = document.getElementById('status');
+      if (ready) { status.className = 'status run'; status.textContent = 'Ready. Click below to generate the session.'; }
+    }
+
+    sel.addEventListener('change', () => selectPersona(sel.value));
+
+    function markReady() {
+      if (ready) return; ready = true;
+      document.getElementById('mode').textContent = 'PostHog connected ✓';
+      document.getElementById('run').disabled = false;
+      const status = document.getElementById('status');
+      status.className = 'status run';
+      status.textContent = 'Ready. Click below to generate the session.';
+    }
+    posthog.onFeatureFlags(markReady);
+    setTimeout(markReady, 3000);
 
     async function run() {
       const btn = document.getElementById('run');
       btn.disabled = true;
+      const p = PERSONAS[sel.value];
       const status = document.getElementById('status');
       status.className = 'status run';
       status.textContent = 'Running… keep this tab focused so the replay records.';
 
-      posthog.capture('$pageview', { $current_url: location.origin + '/billing/upgrade' });
-      mark(0, 'done'); await sleep(900);
-
-      posthog.capture('plan upgrade started', { from: 'Free', to: 'Scale' });
-      mark(1, 'done'); await sleep(900);
-
-      posthog.capture('payment method added', { brand: 'visa' });
-      mark(2, 'done'); await sleep(900);
-
-      posthog.capture('checkout submitted', { amount: 1450, currency: 'USD' });
-      mark(3, 'done'); await sleep(700);
-
-      // First decline — captured as an exception so it shows as friction.
-      posthog.captureException(new Error('402 from billing-svc: card_declined'),
-        { $exception_type: 'PaymentError', stage: 'checkout' });
-      posthog.capture('$exception', { $exception_message: '402 from billing-svc: card_declined', $exception_type: 'PaymentError' });
-      mark(4, 'err'); await sleep(1200);
-
-      posthog.capture('checkout retry', {});
-      posthog.capture('$exception', { $exception_message: '402 from billing-svc: card_declined', $exception_type: 'PaymentError' });
-      mark(5, 'err'); await sleep(1000);
-
-      posthog.capture('$pageview', { $current_url: location.origin + '/support/new' });
-      posthog.capture('support ticket created', { subject: "Can't upgrade - card keeps getting declined" });
-      mark(6, 'done'); await sleep(500);
+      for (let i = 0; i < p.steps.length; i++) {
+        const s = p.steps[i];
+        s.fire(posthog);
+        document.getElementById('d' + i).className = 'dot ' + (s.err ? 'err' : 'done');
+        document.getElementById('t' + i).textContent =
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        await sleep(900);
+      }
 
       status.className = 'status done';
-      status.innerHTML = '✓ Done — events sent. Give PostHog ~30s, then check the sidebar.';
+      status.innerHTML = `✓ Done — events sent for <b>${sel.value}</b>. Give PostHog ~30s, then check the sidebar.`;
+      btn.disabled = false;
     }
-
     document.getElementById('run').addEventListener('click', run);
+
+    // initialise on the first persona
+    selectPersona(sel.value);
   </script>
 </body>
 </html>

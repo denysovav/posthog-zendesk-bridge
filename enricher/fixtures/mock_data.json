@@ -1,11 +1,11 @@
 {
   "_comment": "Mock PostHog data used when POSTHOG_API_KEY is unset. Keyed by person email so the enricher behaves identically to live mode. Add your own email here to demo against yourself.",
   "persons": {
-    "victoria@thetest.ai": {
+    "victoria+test@thetest.ai": {
       "distinct_id": "0190a3f2-victoria",
       "properties": {
-        "email": "victoria@thetest.ai",
-        "name": "Victoria Sirius",
+        "email": "victoria+test@thetest.ai",
+        "name": "Victoria Lopez",
         "organization": "Acme Corp",
         "plan": "Scale",
         "mrr": 1450,

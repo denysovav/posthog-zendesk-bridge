@@ -212,7 +212,7 @@
     (async function init() {
       // Standalone mode (browser demo): ?email=...&bridge=...
       if (!window.ZAFClient || qs.get("standalone") === "1" || qs.get("email")) {
-        const email = qs.get("email") || "victoria@thetest.ai";
+        const email = qs.get("email") || "victoria+test@thetest.ai";
         const bridge = qs.get("bridge") || DEFAULT_BRIDGE;
         return fetchAndRender(bridge, email, null);
       }
@@ -233,7 +233,7 @@
         fetchAndRender(bridge, email, client);
       } catch (e) {
         // Fall back to standalone default if ZAF calls fail.
-        fetchAndRender(DEFAULT_BRIDGE, "victoria@thetest.ai", client);
+        fetchAndRender(DEFAULT_BRIDGE, "victoria+test@thetest.ai", client);
       }
     })();
   </script>
