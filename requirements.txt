@@ -1,0 +1,7 @@
+# Root requirements so Railway/Nixpacks detects this as a Python app and
+# installs the bridge's dependencies. Mirrors enricher/requirements.txt.
+fastapi>=0.136
+uvicorn>=0.48
+requests>=2.34
+pydantic>=2.13
+python-dotenv>=1.0
