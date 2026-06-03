@@ -1,0 +1,14 @@
+{
+  "app": {
+    "name": "PostHog Context",
+    "short_description": "Surfaces PostHog user context inside the ticket sidebar",
+    "long_description": "Auto-enriches Zendesk tickets with the requester's PostHog data: plan & MRR, recent event timeline, friction signals, session recordings, and active feature flags — so agents stop spending the first 5 minutes asking what PostHog already knows.",
+    "installation_instructions": "Set bridge_url to the URL of your running enricher service (the FastAPI app in /enricher).",
+    "parameters": {
+      "bridge_url": {
+        "label": "Bridge URL",
+        "helpText": "URL of the enricher API, e.g. http://localhost:8123"
+      }
+    }
+  }
+}

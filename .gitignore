@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Node / ZAT
+node_modules/
+zendesk-app/tmp/
+*.zip
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

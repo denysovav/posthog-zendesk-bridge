@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PostHog Context</title>
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <style>
+    :root {
+      --bg: #fff;
+      --ink: #1d1f27;
+      --muted: #6b7280;
+      --line: #e8e8ec;
+      --accent: #1d4aff;
+      --warn-bg: #fff4f2;
+      --warn-ink: #b3261e;
+      --warn-line: #f3c5bd;
+      --chip: #f1f1f4;
+      --ph: #f54e00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 10px;
+    }
+    .topbar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .topbar .logo { font-size: 15px; }
+    .topbar .title { font-weight: 600; font-size: 13px; }
+    .badge {
+      margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; padding: 2px 6px; border-radius: 4px;
+    }
+    .badge.live { background: #e6f6ec; color: #137333; }
+    .badge.mock { background: #fef3cd; color: #8a6d00; }
+
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    .card h3 {
+      margin: 0 0 8px; font-size: 11px; font-weight: 700; color: var(--muted);
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .person-name { font-weight: 600; font-size: 14px; }
+    .person-sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 8px; }
+    .grid .k { color: var(--muted); font-size: 11px; }
+    .grid .v { font-weight: 600; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip { background: var(--chip); border-radius: 5px; padding: 2px 7px; font-size: 11px; }
+    .chip.flag { background: #ecf0ff; color: var(--accent); font-weight: 600; }
+
+    .warn { background: var(--warn-bg); border-color: var(--warn-line); }
+    .warn h3 { color: var(--warn-ink); }
+    .signal { display: flex; gap: 6px; align-items: baseline; margin: 5px 0; }
+    .signal .dot { color: var(--warn-ink); }
+    .signal .txt { flex: 1; }
+    .signal .txt b { font-weight: 600; }
+    .signal .when { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .timeline { position: relative; margin: 0; padding: 0; list-style: none; }
+    .timeline li { position: relative; padding: 0 0 9px 16px; }
+    .timeline li::before {
+      content: ""; position: absolute; left: 4px; top: 4px; width: 7px; height: 7px;
+      border-radius: 50%; background: #cfd2da;
+    }
+    .timeline li.sig::before { background: var(--warn-ink); }
+    .timeline li::after {
+      content: ""; position: absolute; left: 7px; top: 11px; bottom: -2px; width: 1px; background: var(--line);
+    }
+    .timeline li:last-child::after { display: none; }
+    .ev { font-weight: 600; }
+    .ev-detail { color: var(--muted); }
+    .ev-when { color: var(--muted); font-size: 11px; }
+
+    .rec { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+    .rec a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .rec a:hover { text-decoration: underline; }
+    .rec .meta { color: var(--muted); font-size: 11px; }
+
+    a.deep { color: var(--accent); text-decoration: none; }
+    a.deep:hover { text-decoration: underline; }
+
+    .empty { color: var(--muted); padding: 18px 8px; text-align: center; }
+    .empty .big { font-size: 22px; }
+    .loading { color: var(--muted); padding: 20px 8px; text-align: center; }
+    .src-note { color: var(--muted); font-size: 10px; text-align: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="logo">🦔</span>
+    <span class="title">PostHog Context</span>
+    <span id="badge" class="badge mock">mock</span>
+  </div>
+  <div id="root"><div class="loading">Loading PostHog context…</div></div>
+  <div class="src-note" id="srcnote"></div>
+
+  <script>
+    // ---- config -----------------------------------------------------------
+    const qs = new URLSearchParams(location.search);
+    const DEFAULT_BRIDGE = "http://localhost:8123";
+
+    // ---- helpers ----------------------------------------------------------
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    function resize(client) {
+      if (!client) return;
+      const h = Math.min(document.body.scrollHeight + 16, 1600);
+      client.invoke("resize", { width: "100%", height: h + "px" });
+    }
+
+    // ---- rendering --------------------------------------------------------
+    function render(d) {
+      const badge = document.getElementById("badge");
+      badge.textContent = d.source;
+      badge.className = "badge " + (d.source === "live" ? "live" : "mock");
+      document.getElementById("srcnote").textContent =
+        d.source === "mock" ? "Demo data — set POSTHOG_API_KEY for live" : "";
+
+      if (!d.found) {
+        document.getElementById("root").innerHTML =
+          `<div class="empty"><div class="big">🔍</div>
+           No PostHog person for<br><b>${esc(d.email)}</b><br>
+           <span style="font-size:11px">They may use a different email in-product.</span></div>`;
+        return;
+      }
+
+      const p = d.person;
+      let html = "";
+
+      // Panel 1 — snapshot
+      html += `<div class="card">
+        <div class="person-name">${esc(p.name || d.email)}</div>
+        <div class="person-sub">${esc(p.organization || "")}${p.country ? " · " + esc(p.country) : ""}</div>
+        <div class="grid">
+          <div><div class="k">Plan</div><div class="v">${esc(p.plan || "—")}</div></div>
+          <div><div class="k">MRR</div><div class="v">${p.mrr != null ? "$" + esc(p.mrr) : "—"}</div></div>
+          <div><div class="k">Last seen</div><div class="v">${esc(p.last_seen_human || "—")}</div></div>
+          <div><div class="k">SDK</div><div class="v" style="font-size:11px">${esc(p.sdk || "—")}</div></div>
+        </div>
+      </div>`;
+
+      // Panel 2 — friction signals (only if present)
+      if (d.signals && d.signals.length) {
+        html += `<div class="card warn"><h3>⚠ Friction this session</h3>` +
+          d.signals.map(s => `<div class="signal">
+            <span class="dot">●</span>
+            <span class="txt"><b>${esc(s.event)}</b> ${esc(s.detail)}</span>
+            <span class="when">${esc(s.ago)}</span>
+          </div>`).join("") + `</div>`;
+      }
+
+      // Cohorts
+      if (d.cohorts && d.cohorts.length) {
+        html += `<div class="card"><h3>Cohorts</h3><div class="chips">` +
+          d.cohorts.map(c => `<span class="chip">${esc(c)}</span>`).join("") + `</div></div>`;
+      }
+
+      // Panel 3 — event timeline
+      if (d.events && d.events.length) {
+        html += `<div class="card"><h3>Recent activity</h3><ul class="timeline">` +
+          d.events.slice(0, 12).map(e => `<li class="${e.is_signal ? "sig" : ""}">
+            <span class="ev">${esc(e.event)}</span>
+            ${e.detail ? ` <span class="ev-detail">${esc(e.detail)}</span>` : ""}
+            <div class="ev-when">${esc(e.ago)}</div>
+          </li>`).join("") + `</ul></div>`;
+      }
+
+      // Panel 4 — recordings
+      if (d.recordings && d.recordings.length) {
+        html += `<div class="card"><h3>📹 Session recordings</h3>` +
+          d.recordings.map(r => {
+            const mins = Math.round((r.duration_seconds || 0) / 60 * 10) / 10;
+            const errs = r.console_errors ? ` · ${r.console_errors} errors` : "";
+            return `<div class="rec">
+              <a href="${esc(r.url)}" target="_blank" rel="noopener">▶ ${mins}m replay</a>
+              <span class="meta">${errs}</span>
+            </div>`;
+          }).join("") + `</div>`;
+      }
+
+      // Flags
+      const active = Object.entries(d.flags || {}).filter(([, v]) => v).map(([k]) => k);
+      if (active.length) {
+        html += `<div class="card"><h3>🚩 Active flags</h3><div class="chips">` +
+          active.map(f => `<span class="chip flag">${esc(f)}</span>`).join("") + `</div></div>`;
+      }
+
+      document.getElementById("root").innerHTML = html;
+    }
+
+    // ---- bootstrap --------------------------------------------------------
+    async function fetchAndRender(bridgeUrl, email, client) {
+      try {
+        const res = await fetch(`${bridgeUrl}/api/context?email=${encodeURIComponent(email)}`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        render(await res.json());
+      } catch (err) {
+        document.getElementById("root").innerHTML =
+          `<div class="empty"><div class="big">⚠️</div>
+           Couldn't reach the bridge.<br>
+           <span style="font-size:11px">${esc(bridgeUrl)}<br>${esc(err.message)}</span></div>`;
+      } finally {
+        resize(client);
+      }
+    }
+
+    (async function init() {
+      // Standalone mode (browser demo): ?email=...&bridge=...
+      if (!window.ZAFClient || qs.get("standalone") === "1" || qs.get("email")) {
+        const email = qs.get("email") || "victoria@thetest.ai";
+        const bridge = qs.get("bridge") || DEFAULT_BRIDGE;
+        return fetchAndRender(bridge, email, null);
+      }
+
+      // Zendesk mode: pull requester email + configured bridge URL from ZAF.
+      const client = ZAFClient.init();
+      try {
+        const ctx = await client.context();
+        const meta = await client.metadata();
+        const data = await client.get("ticket.requester.email");
+        const email = data["ticket.requester.email"];
+        const bridge = (meta.settings && meta.settings.bridge_url) || DEFAULT_BRIDGE;
+        if (!email) {
+          document.getElementById("root").innerHTML =
+            `<div class="empty">No requester email on this ticket.</div>`;
+          return resize(client);
+        }
+        fetchAndRender(bridge, email, client);
+      } catch (e) {
+        // Fall back to standalone default if ZAF calls fail.
+        fetchAndRender(DEFAULT_BRIDGE, "victoria@thetest.ai", client);
+      }
+    })();
+  </script>
+</body>
+</html>
