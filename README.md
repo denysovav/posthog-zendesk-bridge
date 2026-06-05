@@ -4,9 +4,11 @@
 
 When a ticket arrives, this surfaces the requester's PostHog context *right in the Zendesk sidebar*: their plan and MRR, what they were doing right before they wrote in, the errors they hit, links to their session recordings, and which feature flags they're on. No tab-switching, no "can you tell me your account email," no guessing.
 
-> Built as a working POC, not a slide. It runs today against bundled mock data, and switches to live PostHog/Zendesk with a `.env` file.
+> Built as a working POC, not a slide. It runs today against bundled mock data, and switches to live PostHog and Zendesk with a `.env` file. It's also deployed live and installed in a real Zendesk instance.
 
-> 📹 **30-second demo:** follow the [Quickstart](#quickstart-mock-data--no-accounts-needed) and open the standalone URL — the sidebar renders live against the bundled data. _(Drop a `docs/demo.gif` here once you've recorded it.)_
+![The PostHog Context panel inside a live Zendesk ticket](docs/sidebar-in-zendesk.png)
+
+*A customer writes in: "export to CSV fails every time." Before the agent types a word, the sidebar already shows the answer, pulled live from PostHog: Free plan, two export timeouts, the plan row-limit, and a session recording of exactly what happened.*
 
 ---
 
