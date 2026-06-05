@@ -1,8 +1,8 @@
 {
   "name": "PostHog Context",
   "author": {
-    "name": "Victoria Sirius",
-    "email": "victoria@thetest.ai"
+    "name": "Victoria Lopez",
+    "email": "victoria+test@thetest.ai"
   },
   "defaultLocale": "en",
   "private": true,
@@ -18,7 +18,7 @@
       "name": "bridge_url",
       "type": "text",
       "required": true,
-      "default": "http://localhost:8123",
+      "default": "https://zendesk-bridge.up.railway.app",
       "secure": false
     }
   ]
