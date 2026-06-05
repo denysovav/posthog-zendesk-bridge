@@ -4,7 +4,7 @@
 `build_payload` -> JSON the sidebar app renders into its four panels.
 
 Run directly to preview against mock data:
-    python -m enricher.enrich victoria@thetest.ai
+    python -m enricher.enrich victoria+test@thetest.ai
 """
 
 from __future__ import annotations
@@ -252,7 +252,7 @@ def build_summary_html(ctx: PersonContext) -> str:
 
 
 def _cli() -> None:
-    email = sys.argv[1] if len(sys.argv) > 1 else "victoria@thetest.ai"
+    email = sys.argv[1] if len(sys.argv) > 1 else "victoria+test@thetest.ai"
     client = PostHogClient()
     ctx = client.get_person_context(email)
     print(f"\n=== mode: {client.mode} ===\n")

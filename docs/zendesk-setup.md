@@ -57,7 +57,7 @@ You don't need any of the above to demo the UI. Serve the app statically and ope
 it with a query param:
 
 ```
-http://localhost:5599/zendesk-app/assets/iframe.html?email=victoria@thetest.ai&bridge=http://localhost:8123
+http://localhost:5599/zendesk-app/assets/iframe.html?email=victoria%2Btest@thetest.ai&bridge=http://localhost:8123
 ```
 
 This is the fastest path to a screen recording for the application.

@@ -12,7 +12,7 @@ When a ticket arrives, this surfaces the requester's PostHog context *right in t
 
 ## The story it tells
 
-Open a ticket from `victoria@thetest.ai` — *"Can't upgrade, card keeps getting declined."* Before reading a word of back-and-forth, the agent sees:
+Open a ticket from `victoria+test@thetest.ai` (Victoria Lopez) — *"Can't upgrade, card keeps getting declined."* Before reading a word of back-and-forth, the agent sees:
 
 - **Scale plan, $1,450 MRR** — this is a paying customer, route accordingly
 - **⚠️ Friction this session:** two `$exception` events — `402 card_declined` from the billing service, minutes ago
@@ -55,11 +55,12 @@ python3 -m venv .venv && ./.venv/bin/pip install -r enricher/requirements.txt
 ./.venv/bin/uvicorn enricher.app:app --port 8123
 
 # 2. In another terminal, see the enrichment as the webhook would post it
-./.venv/bin/python -m enricher.enrich victoria@thetest.ai
+./.venv/bin/python -m enricher.enrich victoria+test@thetest.ai
 
 # 3. See the sidebar — serve the app and open it standalone
 python3 -m http.server 5599
-#   → http://localhost:5599/zendesk-app/assets/iframe.html?email=victoria@thetest.ai&bridge=http://localhost:8123
+#   → http://localhost:5599/zendesk-app/assets/iframe.html?email=victoria%2Btest@thetest.ai&bridge=http://localhost:8123
+#   (the %2B is an encoded "+"; a raw + in a URL query is read as a space)
 ```
 
 Run the tests (fully offline):
